@@ -1,0 +1,80 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Constants for simulation
+q = 1.6e-19          # Elementary charge (C)
+k = 1.38e-23         # Boltzmann constant (J/K)
+T = 300              # Temperature (K)
+Vth = 0.4            # Threshold voltage (V)
+mu = 200e-4          # Mobility (cm^2/Vs)
+Cox = 1e-7           # Oxide capacitance per unit area (F/cm^2)
+L = 20e-7            # Channel length (cm)
+W = 1e-7             # Channel width (cm)
+tox = 2e-9           # Oxide thickness (m)
+
+# Define fin counts and Vds and Vgs ranges
+fin_counts = [1,4,8]
+Vds_values = np.linspace(0, 1.2, 800)  # Drain-Source Voltage range
+Vgs_values = [0.4, 0.6, 0.8, 1.0]      # Gate-Source Voltage values
+
+# Prepare data dictionary
+finCurrent = {}
+for finNumber in fin_counts:
+    #print(finNumber)
+    finCurrent[finNumber] = 'Id per Fin (Total Fins = ' + str(finNumber) +') [A]'
+    #print(finCurrent) 
+'''finCurrent = {4:'Id per Fin (Total Fins=4) [A]', 6:'Id per Fin (Total Fins=6) [A]', 
+              8:'Id per Fin (Total Fins=8) [A]', 10:'Id per Fin (Total Fins=10) [A]'}
+'''
+# Plot Id vs Vds for each Vgs and compute per-fin current
+plt.figure(figsize=(10, 6))
+for Vgs in Vgs_values:
+    Id_values = []
+    table_data = {"Vds (V)": Vds_values}
+    for fin_count in fin_counts:
+        table_data[finCurrent[fin_count]] = []
+
+    for Vds in Vds_values:
+        if Vgs < Vth:
+            Id_total = 0  # Cutoff region
+        else:
+            # Linear region
+            if Vds < (Vgs - Vth):
+                Id_total = mu * Cox * (W / L) * ((Vgs - Vth) * Vds - (Vds ** 2) / 2)
+            else:
+                # Saturation region
+                Id_total = (mu * Cox * (W / L) / 2) * (Vgs - Vth) ** 2
+
+        Id_values.append(Id_total)
+
+        # Append data for each fin count
+        for fin_count in fin_counts:
+            Id_per_fin = Id_total / fin_count  # Current per fin for each fin count
+            table_data[finCurrent[fin_count]].append(Id_per_fin)
+
+    # Plot Id vs Vds for this Vgs
+    plt.plot(Vds_values, Id_values, label=f'Vgs = {Vgs} V')
+
+plt.xlabel('Drain-Source Voltage (Vds) [V]')
+plt.ylabel('Total Drain Current (Id) [A]')
+plt.title('I-V Characteristics of a FinFET: Total Id vs Vds')
+plt.legend()
+plt.grid()
+plt.show()
+
+# Convert table data to DataFrame
+table_df = pd.DataFrame(table_data)
+
+# Plot current per fin for each fin count
+plt.figure(figsize=(10, 6))
+x_axis = Vds_values
+
+for fin in finCurrent:
+    plt.plot(x_axis, table_df[finCurrent[fin]], label = f'Fins = {fin}')
+plt.xlabel('Drain-Source Voltage (Vds) [V]')
+plt.ylabel('Current through a single fin [A]')
+plt.title('Current through a single fin of a FinFET vs Vds')
+plt.legend()
+plt.grid()
+plt.show()
